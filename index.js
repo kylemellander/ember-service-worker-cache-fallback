@@ -12,6 +12,11 @@ module.exports = {
     this.app = app;
     this.app.options = this.app.options || {};
     this.app.options['esw-cache-fallback'] = this.app.options['esw-cache-fallback'] || {};
+    app.import(app.bowerDirectory + '/localforage/dist/localforage.js');
+  },
+
+  isDevelopingAddon: function() {
+    return true;
   },
 
   treeForServiceWorker(swTree, appTree) {
