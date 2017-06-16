@@ -15,9 +15,11 @@ self.addEventListener('fetch', event => {
   }
 
   if (urlMatchesAnyPattern(request.url, PATTERN_REGEX)) {
-    event.respondWith(fetch(request)
-      .then(response => saveResponse(request, response))
-      .catch(() => buildResponseFromCache(request))
+    event.respondWith(buildResponseFromCache(request)
+      .then(() => lazyFetch(request, event.source))
+      .catch(
+        () => fetch(request).then(response => saveResponse(request, response))
+      )
     )
   }
 })
@@ -38,6 +40,13 @@ const updateRecord = record => self.localforage.setItem(
   `${CACHE_NAME}-${record.type}[${record.id}]`,
   record.payload
 )
+
+const lazyFetch = (request, client) => {
+  fetch(request)
+    .then(response => saveResponse(request, response))
+    .then(response => response.json())
+    .then(response => { client.postMessage(response)})
+}
 
 const saveResponse = (request, response) =>
   response.clone().text().then(raw => {
@@ -65,6 +74,7 @@ const saveResponse = (request, response) =>
 
 const recordKey = record => `${CACHE_NAME}-${record.type}[${record.id}]`
 const saveRecord = (key, value) => self.localforage.setItem(key, value)
+const checkCachedValue = cache => cache ? cache : Promise.reject()
 
 const saveRequest = (request, response, payload) => {
   const data = {
@@ -101,9 +111,11 @@ const formatPayloadForCaching = payload => {
 }
 
 const buildResponseFromCache = request => self.localforage.getItem(request.url)
+  .then(checkCachedValue)
   .then(populateRecords)
   .then(populateIncludes)
   .then(cache => createResponse(cache, request))
+
 
 const populateRecords = (cache, i = 0) => {
   const populatedCache = Object.assign({}, cache)
