@@ -42,6 +42,7 @@ const updateRecord = record => self.localforage.setItem(
 )
 
 const lazyFetch = (request, client) => {
+  client.postMessage({ loading: true })
   fetch(request)
     .then(response => saveResponse(request, response))
     .then(response => response.json())
