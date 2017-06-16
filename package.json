@@ -1,16 +1,16 @@
 {
-  "name": "ember-service-worker-cache-fallback",
-  "version": "0.6.1",
-  "description": "An Ember Service Worker plugin that resorts to a cached fallback version when the network request fails",
+  "name": "ember-service-worker-smart-jsonapi-caching",
+  "version": "0.1.0",
+  "description": "An Ember Service Worker plugin that caches jsonapi requests and makes sure that they are current in the background",
   "directories": {
     "doc": "doc",
     "test": "tests"
   },
-  "repository": "https://github.com/DockYard/ember-service-worker-cache-fallback",
+  "repository": "https://github.com/kylemmelander/ember-service-worker-smart-jsonapi-caching",
   "engines": {
     "node": ">= 4.0.0"
   },
-  "author": "Marten Schilstra <mail@martenschilstra.nl>",
+  "author": "Kyle Mellander",
   "license": "MIT",
   "keywords": [
     "ember-addon",

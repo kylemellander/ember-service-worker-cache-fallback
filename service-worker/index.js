@@ -1,12 +1,12 @@
-import { PATTERNS, VERSION } from 'ember-service-worker-cache-fallback/service-worker/config';
-import 'ember-service-worker-cache-fallback/service-worker/localforage';
-import cleanupCaches from 'ember-service-worker/service-worker/cleanup-caches';
-import { createUrlRegEx, urlMatchesAnyPattern } from 'ember-service-worker/service-worker/url-utils';
+import { PATTERNS, VERSION } from 'ember-service-worker-cache-fallback/service-worker/config'
+import 'ember-service-worker-cache-fallback/service-worker/localforage'
+import cleanupCaches from 'ember-service-worker/service-worker/cleanup-caches'
+import { createUrlRegEx, urlMatchesAnyPattern } from 'ember-service-worker/service-worker/url-utils'
 
-const CACHE_KEY_PREFIX = 'esw-cache-fallback-localforage';
-const CACHE_NAME = `${CACHE_KEY_PREFIX}-${VERSION}`;
+const CACHE_KEY_PREFIX = 'esw-cache-fallback-localforage'
+const CACHE_NAME = `${CACHE_KEY_PREFIX}-${VERSION}`
 
-const PATTERN_REGEX = PATTERNS.map(createUrlRegEx);
+const PATTERN_REGEX = PATTERNS.map(createUrlRegEx)
 
 self.addEventListener('fetch', event => {
   let request = event.request
