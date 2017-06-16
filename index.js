@@ -22,7 +22,8 @@ module.exports = {
   treeForServiceWorker(swTree, appTree) {
     var options = this.app.options['esw-cache-fallback'];
     var configFile = new Config([appTree], options);
+    var localforageFile = new LocalForagePlugin([appTree], options);
 
-    return mergeTrees([swTree, configFile]);
+    return mergeTrees([swTree, configFile, localforageFile]);
   }
 };
