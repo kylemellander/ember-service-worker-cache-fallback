@@ -10,17 +10,17 @@ const PATTERN_REGEX = PATTERNS.map(createUrlRegEx);
 
 self.addEventListener('fetch', (event) => {
   let request = event.request;
-  if (request.method !== 'GET' || !/^https?/.test(request.url)) {
-    return;
+  if (!/^https?/.test(request.url)) {
+    return
   }
 
   if (urlMatchesAnyPattern(request.url, PATTERN_REGEX)) {
-    event.respondWith(makeRequest(request)
+    event.respondWith(fetch(request)
       .then(response => saveResponse(request, response))
-      .catch(() => caches.match(event.request))
+      .catch(() => buildResponseFromCache(request))
     )
   }
-});
+})
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(cleanupCaches(CACHE_KEY_PREFIX, CACHE_NAME));
@@ -51,11 +51,7 @@ const saveResponse = (request, response) =>
   }).then(() => response)
 
 const recordKey = record => `${CACHE_NAME}-${record.type}[${record.id}]`
-const saveRecord = (key, value) => localforage.setItem(key, value)
-
-const makeRequest = request => new Promise((resolve, reject) => {
-  fetch(request).then(resolve)
-})
+const saveRecord = (key, value) => self.localforage.setItem(key, value)
 
 const saveRequest = (request, response, payload) => {
   const data = {
@@ -89,4 +85,62 @@ const formatPayloadForCaching = payload => {
   }
 
   return formattedPayload
+}
+
+const buildResponseFromCache = request => self.localforage.getItem(request.url)
+  .then(populateRecords)
+  .then(populateIncludes)
+  .then(cache => createResponse(cache, request))
+
+const populateRecords = (cache, i = 0) => {
+  const populatedCache = Object.assign({}, cache)
+  const payload = populatedCache.payload || {}
+  const { data } = payload
+
+  if (!data) {
+    return cache
+  }
+
+  if (Array.isArray(data)) {
+    if (i === data.length) {
+      return populatedCache
+    }
+
+    return self.localforage.getItem(`${CACHE_NAME}-${data[i]}`).then(record => {
+      populatedCache.payload.data[i] = record
+      return populateRecords(populatedCache, i++)
+    })
+  }
+
+  return self.localforage.getItem(`${CACHE_NAME}-${data}`).then(record => {
+    populatedCache.payload.data = record
+    return populatedCache
+  })
+}
+
+const populateIncludes = (cache, i = 0) => {
+  const populatedCache = Object.assign({}, cache)
+  const payload = populatedCache.payload || {}
+  const { includes } = payload
+
+  if (!Array.isArray(includes) || i === includes.length) {
+    return cache
+  }
+
+  return self.localforage.getItem(`${CACHE_NAME}-${includes[i]}`)
+    .then(record => {
+      populatedCache.payload.includes[i] = record
+      return populateRecords(populatedCache, i++)
+    })
+}
+
+const createResponse = (cache, request) => {
+  const params = {
+    status: cache.status,
+    statusText: cache.statusText,
+    headers: cache.headers,
+    url: request.url
+  }
+
+  return new Response(JSON.stringify(cache.payload), params)
 }
