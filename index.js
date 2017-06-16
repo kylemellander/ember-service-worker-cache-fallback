@@ -3,6 +3,7 @@
 
 var Config = require('./lib/config');
 var mergeTrees = require('broccoli-merge-trees');
+var LocalForagePlugin = require('./lib/localforage');
 
 module.exports = {
   name: 'ember-service-worker-cache-fallback',
@@ -12,7 +13,6 @@ module.exports = {
     this.app = app;
     this.app.options = this.app.options || {};
     this.app.options['esw-cache-fallback'] = this.app.options['esw-cache-fallback'] || {};
-    app.import(app.bowerDirectory + '/localforage/dist/localforage.js');
   },
 
   isDevelopingAddon: function() {
