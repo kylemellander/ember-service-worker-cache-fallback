@@ -8,8 +8,8 @@ const CACHE_NAME = `${CACHE_KEY_PREFIX}-${VERSION}`;
 
 const PATTERN_REGEX = PATTERNS.map(createUrlRegEx);
 
-self.addEventListener('fetch', (event) => {
-  let request = event.request;
+self.addEventListener('fetch', event => {
+  let request = event.request
   if (!/^https?/.test(request.url)) {
     return
   }
@@ -22,9 +22,22 @@ self.addEventListener('fetch', (event) => {
   }
 })
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(cleanupCaches(CACHE_KEY_PREFIX, CACHE_NAME));
-});
+self.addEventListener('message', event => {
+  if (event.data.clear) {
+    return clearCache()
+  }
+
+  if (event.data.type && event.data.id) {
+    return updateRecord(event.data)
+  }
+})
+
+const clearCache = () => self.localforage.clear()
+
+const updateRecord = record => self.localforage.setItem(
+  `${CACHE_NAME}-${record.type}[${record.id}]`,
+  record.payload
+)
 
 const saveResponse = (request, response) =>
   response.clone().text().then(raw => {
