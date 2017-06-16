@@ -72,7 +72,7 @@ const saveRequest = (request, response, payload) => {
 
 const formatPayloadForCaching = payload => {
   const { data, included } = payload
-  const formattedPayload = assign({}, payload)
+  const formattedPayload = Object.assign({}, payload)
 
   if (Array.isArray(data)) {
     formattedPayload.data = data.map(record => `${record.type}[${record.id}]`)
