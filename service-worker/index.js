@@ -15,19 +15,78 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (urlMatchesAnyPattern(request.url, PATTERN_REGEX)) {
-    event.respondWith(
-      caches.open(CACHE_NAME).then((cache) => {
-        return fetch(request)
-          .then((response) => {
-            cache.put(request, response.clone());
-            return response;
-          })
-          .catch(() => caches.match(event.request));
-      })
-    );
+    event.respondWith(makeRequest(request)
+      .then(response => saveResponse(request, response))
+      .catch(() => caches.match(event.request))
+    )
   }
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(cleanupCaches(CACHE_KEY_PREFIX, CACHE_NAME));
 });
+
+const saveResponse = (request, response) =>
+  response.clone().text().then(raw => {
+    const payload = JSON.parse(raw)
+    const { data, included } = payload
+
+    if (Array.isArray(data)) {
+      data.forEach(record => {
+        saveRecord(recordKey(record), record)
+      })
+    } else if (data) {
+      saveRecord(recordKey(data), data)
+    }
+
+    if (Array.isArray(included)) {
+      included.forEach(record => {
+        saveRecord(recordKey(data), data)
+      })
+    }
+
+    if (request.method === 'GET' && response.ok) {
+      saveRequest(request, response, payload)
+    }
+  }).then(() => response)
+
+const recordKey = record => `${CACHE_NAME}-${record.type}[${record.id}]`
+const saveRecord = (key, value) => localforage.setItem(key, value)
+
+const makeRequest = request => new Promise((resolve, reject) => {
+  fetch(request).then(resolve)
+})
+
+const saveRequest = (request, response, payload) => {
+  const data = {
+    status: response.status,
+    statusText: response.statusText,
+    headers: {},
+    payload: formatPayloadForCaching(payload)
+  }
+
+  response.headers.forEach((value, key) => data.headers[key] = value)
+
+  saveRecord(request.url, data)
+}
+
+const formatPayloadForCaching = payload => {
+  const { data, included } = payload
+  const formattedPayload = assign({}, payload)
+
+  if (Array.isArray(data)) {
+    formattedPayload.data = data.map(record => `${record.type}[${record.id}]`)
+  } else if (data) {
+    formattedPayload.data = `${data.type}[${data.id}]`
+  }
+
+  if (Array.isArray(included)) {
+    const formattedIncluded = included.map(record =>
+      `${record.type}[${record.id}]`
+    )
+
+    formattedPayload.included = formattedIncluded
+  }
+
+  return formattedPayload
+}
