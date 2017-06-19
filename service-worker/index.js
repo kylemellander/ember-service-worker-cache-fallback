@@ -89,7 +89,7 @@ const saveResponse = (request, response) =>
 
     if (Array.isArray(included)) {
       included.forEach(record => {
-        saveRecord(recordKey(data), data)
+        saveRecord(recordKey(record), record)
       })
     }
 
@@ -100,7 +100,6 @@ const saveResponse = (request, response) =>
 
 const recordKey = record => `${CACHE_NAME}-${record.type}[${record.id}]`
 const saveRecord = (key, value) => self.localforage.setItem(key, value)
-const checkCachedValue = cache => cache ? cache : Promise.reject()
 
 const saveRequest = (request, response, payload) => {
   const data = {
@@ -137,20 +136,17 @@ const formatPayloadForCaching = payload => {
 }
 
 const buildResponseFromCache = request => self.localforage.getItem(request.url)
-  .then(checkCachedValue)
   .then(populateRecords)
   .then(populateIncludes)
   .then(cache => createResponse(cache, request))
 
-
 const populateRecords = (cache, i = 0) => {
+  if (!cache || !cache.payload || !cache.payload.data) {
+    return
+  }
   const populatedCache = Object.assign({}, cache)
   const payload = populatedCache.payload || {}
   const { data } = payload
-
-  if (!data) {
-    return cache
-  }
 
   if (Array.isArray(data)) {
     if (i === data.length) {
@@ -159,7 +155,7 @@ const populateRecords = (cache, i = 0) => {
 
     return self.localforage.getItem(`${CACHE_NAME}-${data[i]}`).then(record => {
       populatedCache.payload.data[i] = record
-      return populateRecords(populatedCache, i++)
+      return populateRecords(populatedCache, i + 1)
     })
   }
 
@@ -170,6 +166,10 @@ const populateRecords = (cache, i = 0) => {
 }
 
 const populateIncludes = (cache, i = 0) => {
+  if (!cache) {
+    return
+  }
+
   const populatedCache = Object.assign({}, cache)
   const payload = populatedCache.payload || {}
   const { includes } = payload
@@ -181,11 +181,15 @@ const populateIncludes = (cache, i = 0) => {
   return self.localforage.getItem(`${CACHE_NAME}-${includes[i]}`)
     .then(record => {
       populatedCache.payload.includes[i] = record
-      return populateRecords(populatedCache, i++)
+      return populateIncludes(populatedCache, i + 1)
     })
 }
 
 const createResponse = (cache, request) => {
+  if (!cache) {
+    return
+  }
+
   const params = {
     status: cache.status,
     statusText: cache.statusText,
