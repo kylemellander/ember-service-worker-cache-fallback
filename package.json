@@ -1,6 +1,6 @@
 {
   "name": "ember-service-worker-smart-jsonapi-caching",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An Ember Service Worker plugin that caches jsonapi requests and makes sure that they are current in the background",
   "directories": {
     "doc": "doc",
