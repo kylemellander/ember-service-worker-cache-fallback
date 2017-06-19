@@ -20,10 +20,15 @@ self.addEventListener('fetch', event => {
 
   if (urlMatchesAnyPattern(request.url, PATTERN_REGEX)) {
     event.respondWith(buildResponseFromCache(request)
-      .then(() => lazyFetch(request, event.source))
-      .catch(
-        () => fetch(request).then(response => saveResponse(request, response))
-      )
+      .then(response => {
+        if (response) {
+          return response
+        }
+
+        fetchStatus = 'fetching'
+        return fetch(request)
+          .then(response => saveResponse(request, response))
+      })
     )
     event.waitUntil(lazyFetch(request, clientId))
   }
