@@ -9,9 +9,11 @@ const CACHE_KEY_PREFIX = 'esw-cache-fallback-localforage'
 const CACHE_NAME = `${CACHE_KEY_PREFIX}-${VERSION}`
 
 const PATTERN_REGEX = PATTERNS.map(createUrlRegEx)
+let fetchStatus
 
 self.addEventListener('fetch', event => {
   let request = event.request
+  const clientId = event.clientId
   if (!/^https?/.test(request.url)) {
     return
   }
@@ -23,6 +25,7 @@ self.addEventListener('fetch', event => {
         () => fetch(request).then(response => saveResponse(request, response))
       )
     )
+    event.waitUntil(lazyFetch(request, clientId))
   }
 })
 
@@ -38,17 +41,32 @@ self.addEventListener('message', event => {
 
 const clearCache = () => self.localforage.clear()
 
-const updateRecord = record => self.localforage.setItem(
-  `${CACHE_NAME}-${record.type}[${record.id}]`,
-  record.payload
-)
+const updateRecord = record =>
+  self.localforage.setItem(recordKey(record), record)
 
-const lazyFetch = (request, client) => {
-  client.postMessage({ loading: true })
-  fetch(request)
+const lazyFetch = (request, clientId) => {
+  let client
+  const start = Date.now()
+  let end = Date.now()
+  const timeout = 500
+  while(!fetchStatus && end - start < timeout) {
+    end = Date.now()
+  }
+
+  if (fetchStatus === 'fetching' || end - start > timeout) {
+    return
+  }
+
+  return self.clients.get(clientId)
+    .then(foundClient => {
+      client = foundClient
+      client.postMessage({ loading: true })
+    })
+    .then(() => fetch(request))
     .then(response => saveResponse(request, response))
     .then(response => response.json())
-    .then(response => { client.postMessage(response)})
+    .then(response => client.postMessage(response))
+    .catch(() => client.postMessage({ fetchFailed: true }))
 }
 
 const saveResponse = (request, response) =>
