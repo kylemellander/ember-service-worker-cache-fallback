@@ -35,16 +35,27 @@ self.addEventListener('fetch', event => {
 })
 
 self.addEventListener('message', event => {
-  if (event.data.clear) {
+  const message = event.data
+  if (message.type === 'deleteAll') {
     return clearCache()
   }
 
-  if (event.data.type && event.data.id) {
-    return updateRecord(event.data)
+  if (message.type === 'delete' && message.data) {
+    return clearCache(message.data)
+  }
+
+  if (message.type === 'update' && message.data.id) {
+    return updateRecord(message.data)
   }
 })
 
-const clearCache = () => self.localforage.clear()
+const clearCache = record => {
+  if (!record) {
+    return self.localforage.clear()
+  }
+
+  self.localforage.removeItem(recordKey(record))
+}
 
 const updateRecord = record =>
   self.localforage.setItem(recordKey(record), record)
